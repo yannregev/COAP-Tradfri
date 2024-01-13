@@ -19,11 +19,13 @@ struct COAP_CTX
 };
 
 
-struct COAP_CTX* COAP_init();
-int COAP_set_psk_key(struct COAP_CTX* ctx, char *key, int len);
-int COAP_set_psk_identity(struct COAP_CTX* ctx, char *identity, int len);
-int COAP_send_get(struct COAP_CTX* ctx, char *endpoint, int endpoint_len, void (*callback)(char*, int));
-int COAP_set_server_addr(struct COAP_CTX* ctx, char *addr, int len);
-void COAP_free(struct COAP_CTX* ctx);
+int COAP_init(void);
+int COAP_set_psk_key(char *key, int len);
+int COAP_set_psk_identity(char *identity, int len);
+int COAP_send_get(char *endpoint, int endpoint_len, char *response);
+int COAP_send_put(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
+int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_len, void (*callback)(char*, int));
+int COAP_set_server_addr(char *addr, int len);
+void COAP_free(void);
 
 #endif
