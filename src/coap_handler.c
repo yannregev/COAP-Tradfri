@@ -50,6 +50,28 @@ static void generateRandomArray(int size, uint8_t *hexArray)
     }
 }
 
+static void print_res_code(int res_code) 
+{
+    printf("Code: ");
+    switch(res_code)
+    {
+    case 0x85:
+        printf("4.05 Method not allowed\n");
+        break;
+    case 0x84:
+        printf("4.04 Not found\n");
+        break;
+    case 0x45:
+        printf("2.05 Content\n");
+        break;
+    case 0x44:
+        printf("2.04 Changed\n");
+        break;
+    default:
+        printf("Unknown\n");
+    }
+}
+
 /**
  *  Parse the header of coap response
  *  @param response - the coap response
@@ -63,6 +85,7 @@ static void parse_response_header(uint8_t **response, int *len)
     (*len)--;
     uint8_t res_token_len = res_header & 0x0F;
     uint8_t res_code = *(*response)++;
+    print_res_code(res_code);
     (*len)--;
     uint16_t res_msg_id = (*(*response) << 8) | *(*response);
     (*response)+=2;
