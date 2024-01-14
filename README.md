@@ -2,9 +2,11 @@
 This is a fun project I am working on, a desktop app to control ikea tradfri smart home.
 This is currently windows only.
 
+# Requirments
+OpenSSL >= 3.2.0-1
+
 # Compile
-TODO
-gcc src\coap_handler.c -Iinclude\ -o coap_handler.exe -lcrypto -lssl -lws2_32
+use Makefile
 
 
 ## Get response:
