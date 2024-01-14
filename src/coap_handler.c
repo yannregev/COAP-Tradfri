@@ -18,6 +18,11 @@
 #define POST 	2
 #define PUT 	3
 
+typedef struct {
+    uint8_t version_type_token;
+    uint8_t code;
+    uint16_t message_id;
+} CoapHeader;
 
 struct COAP_CTX *ctx;
 
@@ -50,9 +55,9 @@ static void generateRandomArray(int size, uint8_t *hexArray)
  *  @param response - the coap response
  *  @param len - length of the response, will be decreamented
  **/
-static void parse_response_header(char **response, int *len)
+static void parse_response_header(uint8_t **response, int *len)
 {
-    //Strip header, Maybe do some extra checks ?
+    // Strip header, Maybe do some extra checks ?
     // For a start skip all until data
     uint8_t res_header = *(*response)++;
     (*len)--;
@@ -96,6 +101,57 @@ static void parse_response_header(char **response, int *len)
             }
         }
     }
+}
+
+static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, int endpoint_len)
+{
+    uint8_t token[TOKEN_LEN];
+    uint8_t msg_id[2];
+    int len = 0;
+    generateRandomArray(TOKEN_LEN, token);
+    generateRandomArray(2, msg_id);
+    char *coap_header = "\x48\x01\x12\x02";
+
+    CoapHeader header;
+    header.version_type_token = 0x48;
+    header.code = request_type;
+    header.message_id = msg_id;
+
+    memcpy(buf, (uint8_t*)&header, 4);
+    len += 4;
+    memcpy(buf+4, token, 8);
+    len += 8;
+
+    if (endpoint_len > 269)
+    {
+        //Won't happen?
+    }
+    else if (endpoint_len > 13)
+    {
+        //Won't happen?
+    }
+    else
+    {
+        char s[endpoint_len];
+        memcpy(s, endpoint, endpoint_len);
+        char *token = strtok(s, "/");
+        uint8_t options = '\xB0';
+        options |= strlen(token);
+        memcpy(buf + len, &options, 1);
+        len += 1;
+        memcpy(buf + len, token, strlen(token));
+        len += strlen(token);
+        token = strtok(NULL, "/");
+        if (token != NULL)
+        {
+            options = strlen(token);
+            memcpy(buf + len, &options, 1);
+            len += 1;
+            memcpy(buf + len, token, strlen(token));
+            len += strlen(token);
+        }
+    }
+    return len;
 }
 
 /**
@@ -183,8 +239,9 @@ static int COAP_connect(WSADATA *wsaData, int *sockfd)
         ERR_print_errors_fp(stderr);
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
-        return 4;
+        return 5;
     }
+    return 0;
 }
 
 int COAP_init(void)
@@ -286,53 +343,10 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
 {
 	if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
 	WSADATA wsaData;
-    char *res_data;
-	int sockfd, rc, offset;
-	uint8_t token[TOKEN_LEN];
-	uint8_t msg_id[2];
+	int sockfd, rc;
 	
 	uint8_t buf[1024]; //Should be enough
-	int len = 0;
-
-    generateRandomArray(TOKEN_LEN, token);
-    generateRandomArray(2, msg_id);
-    char *coap_header = "\x48\x01\x12\x02";
-    memcpy(buf, coap_header, 4);
-    len += 4;
-    memcpy(buf+4, token, 8);
-    len += 8;
-
-
-
-    if (endpoint_len > 269)
-    {
-
-    }
-    else if (endpoint_len > 13)
-    {
-
-    }
-    else
-    {
-        char s[endpoint_len];
-        memcpy(s, endpoint, endpoint_len);
-        char *token = strtok(s, "/");
-        uint8_t options = '\xB0';
-        options |= strlen(token);
-        memcpy(buf + len, &options, 1);
-        len += 1;
-        memcpy(buf + len, token, strlen(token));
-        len += strlen(token);
-        token = strtok(NULL, "/");
-        if (token != NULL)
-        {
-            options = strlen(token);
-            memcpy(buf + len, &options, 1);
-            len += 1;
-            memcpy(buf + len, token, strlen(token));
-            len += strlen(token);
-        }
-    }
+	int len = create_coap_header(buf, GET, endpoint, endpoint_len);
 
 	COAP_connect(&wsaData, &sockfd);
 
@@ -342,7 +356,7 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 1;
+        return -1;
     }
 
     rc = SSL_read(ctx->ssl, buf, sizeof(buf) - 1);
@@ -351,10 +365,10 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 2;
+        return -2;
     }
 
-    char *ptr = buf;
+    uint8_t *ptr = buf;
     parse_response_header(&ptr, &rc);
     if (rc > 0)
     {
@@ -377,51 +391,10 @@ int COAP_send_put(char *endpoint,
     if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
     WSADATA wsaData;
     int sockfd, rc, offset;
-    uint8_t token[TOKEN_LEN];
-    uint8_t msg_id[2];
     
     uint8_t buf[1024]; //Should be enough
-    int len = 0;
-
-    generateRandomArray(TOKEN_LEN, token);
-    generateRandomArray(2, msg_id);
-    char *coap_header = "\x48\x03\x12\x02";
-    memcpy(buf, coap_header, 4);
-    len += 4;
-    memcpy(buf+4, token, 8);
-    len += 8;
-
-
-    if (endpoint_len > 269)
-    {
-        // Won't really happen?
-    }
-    else if (endpoint_len > 13)
-    {
-        // Won't really happen?
-    }
-    else
-    {
-        //Split end point to several options
-        char s[endpoint_len];
-        memcpy(s, endpoint, endpoint_len);
-        char *token = strtok(s, "/");
-        uint8_t options = '\xB0';
-        options |= strlen(token);
-        memcpy(buf + len, &options, 1);
-        len += 1;
-        memcpy(buf + len, token, strlen(token));
-        len += strlen(token);
-        token = strtok(NULL, "/");
-        if (token != NULL)
-        {
-            options = strlen(token);
-            memcpy(buf + len, &options, 1);
-            len += 1;
-            memcpy(buf + len, token, strlen(token));
-            len += strlen(token);
-        }
-    }
+    int len = create_coap_header(buf, PUT, endpoint, endpoint_len);
+    
     buf[len++] = 0X10; // Plain text option
     buf[len++] = 0xFF; // Payload marker
     memcpy(buf + len, payload, payload_len);
@@ -435,7 +408,7 @@ int COAP_send_put(char *endpoint,
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 1;
+        return -1;
     }
 
     rc = SSL_read(ctx->ssl, buf, sizeof(buf) - 1);
@@ -444,10 +417,10 @@ int COAP_send_put(char *endpoint,
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 2;
+        return -2;
     }
     
-    char *ptr = buf;
+    uint8_t *ptr = buf;
     parse_response_header(&ptr, &rc); 
  
     if (rc > 0)
@@ -463,57 +436,20 @@ int COAP_send_put(char *endpoint,
 }
 
 
-int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_len, void (*callback)(char*, int))
+int COAP_send_post(char *endpoint, 
+        int endpoint_len, 
+            char*payload,    
+                int payload_len,
+                    char *response)
 {
     if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
     WSADATA wsaData;
     char *res_data;
     int sockfd, rc, offset;
-    uint8_t token[TOKEN_LEN];
-    uint8_t msg_id[2];
     
     uint8_t buf[1024]; //Should be enough
-    int len = 0;
+    int len = create_coap_header(buf, POST, endpoint, endpoint_len);
 
-    generateRandomArray(TOKEN_LEN, token);
-    generateRandomArray(2, msg_id);
-    char *coap_header = "\x48\x02\x12\x02";
-    memcpy(buf, coap_header, 4);
-    len += 4;
-    memcpy(buf+4, token, 8);
-    len += 8;
-
-
-    if (endpoint_len > 269)
-    {
-        // Won't really happen?
-    }
-    else if (endpoint_len > 13)
-    {
-        // Won't really happen?
-    }
-    else
-    {
-        //Split end point to several options
-        char s[endpoint_len];
-        memcpy(s, endpoint, endpoint_len);
-        char *token = strtok(s, "/");
-        uint8_t options = '\xB0';
-        options |= strlen(token);
-        memcpy(buf + len, &options, 1);
-        len += 1;
-        memcpy(buf + len, token, strlen(token));
-        len += strlen(token);
-        token = strtok(NULL, "/");
-        if (token != NULL)
-        {
-            options = strlen(token);
-            memcpy(buf + len, &options, 1);
-            len += 1;
-            memcpy(buf + len, token, strlen(token));
-            len += strlen(token);
-        }
-    }
     buf[len++] = 0X10; // Plain text option
     buf[len++] = 0xFF; // Payload marker
     memcpy(buf + len, payload, payload_len);
@@ -527,7 +463,7 @@ int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_l
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 1;
+        return -1;
     }
 
     rc = SSL_read(ctx->ssl, buf, sizeof(buf) - 1);
@@ -536,66 +472,31 @@ int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_l
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
         close(sockfd);
-        return 2;
+        return -2;
     }
-    //Strip header, Maybe do some extra checks ?
-    // For a start skip all until data
+
     uint8_t *ptr = buf;
-    uint8_t res_header = *ptr++;
-    uint8_t res_token_len = res_header & 0x0F;
-    uint8_t res_code = *ptr++;
-    uint16_t res_msg_id = (*ptr++ << 8) | *ptr;
-    uint8_t res_token[res_token_len];
-    for (int i = 0; i < res_token_len; i++)
+    parse_response_header(&ptr, &rc); 
+ 
+    if (rc > 0)
     {
-        res_token[i] = *ptr++;
+        memcpy(response, ++ptr, rc); 
+        response[rc-1] = '\0'; 
     }
-    while (*ptr != 0xFF) 
-    {
-        // Extract the length of the option
-        uint8_t optionDelta = (*ptr & 0xF0);
-
-        // Extract the length of the option value
-        uint8_t optionLength = (*ptr & 0x0F);
-        ptr++;
-
-        //Read option data
-        uint8_t option_data[optionLength];
-        for (int i = 0; i < optionLength; i++)
-        {
-            if (*ptr == 0xFF) break; // Sometimes option length is shorter than what it says, arggh
-            option_data[i] = *ptr++;
-        }
-
-        if (optionDelta == 0xC0) { 
-            printf("Content-type: Application/");
-            if (option_data[0] == 0x32)
-            {
-                printf("json\n");
-            }
-        }
-    }
-    *ptr++;
-    ptrdiff_t size = ((char *)ptr) - ((char *)buf);
-    size = rc - size;
-    res_data = malloc(size);
-    memcpy(res_data, ptr, size);
-
-    if (callback != NULL) (*callback)(res_data, size);
-
 
     SSL_shutdown(ctx->ssl);
     closesocket(sockfd);
     WSACleanup();
+    return rc;
 }
 
 void COAP_free(void)
 {
-	if (ctx->psk_identity != NULL) free(ctx->psk_identity);
-	if (ctx->psk_key != NULL) free(ctx->psk_key);
+	if (ctx->psk_identity) free(ctx->psk_identity);
+	if (ctx->psk_key) free(ctx->psk_key);
     if (ctx->ssl) SSL_free(ctx->ssl);
     if (ctx->ssl_ctx) SSL_CTX_free(ctx->ssl_ctx);
-    if (ctx != NULL) 
+    if (ctx) 
     {
         free(ctx);
         ctx = NULL;
