@@ -8,11 +8,17 @@
 
 #define TURN_ON_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 1 }]}"
 #define TURN_OFF_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 0 }]}"
+
+#define DIM_LAMP_PAYLOAD "{\"3311\": [{ \"5851\": %d }]}"
+
 #define REGISTER_ENDPOINT "15001/9063"
 #define DEFAULT_PATH "15001/"
 
 static void retrieve_key(char* data, int len)
 {
+	fprintf(stderr, "Not implemented!\n");
+	exit(1);
+
 	char *ptr;
 	if ((ptr = strstr(data, "\"9091\":")) == NULL)
 	{
@@ -46,8 +52,10 @@ static void generate_identity(char *hexArray, int size)
 static void tradfri_register_identity(char* identity, char* key)
 {
 	char payload[100];
+	char response[100];
 	int len = sprintf(payload, "{\"9090\" : \"%s\"}", identity);
-	COAP_send_post(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, retrieve_key);
+	len = COAP_send_post(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
+	retrieve_key(response, len);
 }
 /*
 int tradfri_init()
@@ -102,6 +110,28 @@ int tradfri_get_lamp(char* lamp_id, char *response)
 	return len;
 }
 
+int tradfri_dim_lamp(char* lamp_id, int dim, char* response)
+{
+	int len;
+	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	char endpoint[endpoint_len];
+	char payload[strlen(DIM_LAMP_PAYLOAD) + 4];
+	
+	assert(COAP_init() == 0);
+	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
+	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+
+	COAP_set_psk_key(PSK_KEY, strlen(PSK_KEY));
+	COAP_set_psk_identity(PSK_IDENTITY, strlen(PSK_IDENTITY));
+	COAP_set_server_addr(SERVER_IP, strlen(SERVER_IP));
+
+
+	len = snprintf(payload, strlen(DIM_LAMP_PAYLOAD) + 4, DIM_LAMP_PAYLOAD, dim);
+    len = COAP_send_put(endpoint, strlen(endpoint), payload, len, response);
+    COAP_free();
+    return len;
+}
+
 int tradfri_turn_on_lamp(char* lamp_id, char *response)
 {
 	int len;
@@ -128,7 +158,7 @@ int tradfri_turn_off_lamp(char* lamp_id, char *response)
 	assert(COAP_init() == 0);
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
 	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
-	
+
 	COAP_set_psk_key(PSK_KEY, strlen(PSK_KEY));
 	COAP_set_psk_identity(PSK_IDENTITY, strlen(PSK_IDENTITY));
 	COAP_set_server_addr(SERVER_IP, strlen(SERVER_IP));

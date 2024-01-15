@@ -11,17 +11,20 @@ BINDIR   = bin
 SOURCES  := $(wildcard $(SRCDIR)/*.c)
 INCLUDES := $(wildcard $(SRCDIR)/*.h)
 OBJECTS  := $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
-rm 	 := /bin/rm -f
+RM 	 := /bin/rm -f
+MKDIR := /bin/mkdir -p
 
 $(BINDIR)/$(TARGET): $(OBJECTS)
+	@${MKDIR} $(@D)
 	@$(LINKER) $(OBJECTS) $(LFLAGS) -o $@
 	@echo "Linking complete!"
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
+	@${MKDIR} $(@D)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo "Compiled "$<" successfully!"
 
 .PHONY: clean
 clean:
-	@${rm} -f $(OBJECTS)
-	@$(rm) $(BINDIR)/$(TARGET)
+	@${RM} -f $(OBJECTS)
+	@$(RM) $(BINDIR)/$(TARGET)
