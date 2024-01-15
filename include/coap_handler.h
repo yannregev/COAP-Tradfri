@@ -20,12 +20,14 @@ struct COAP_CTX
 
 
 int COAP_init(void);
+int COAP_connect(void);
 int COAP_set_psk_key(char *key, int len);
 int COAP_set_psk_identity(char *identity, int len);
 int COAP_send_get(char *endpoint, int endpoint_len, char *response);
 int COAP_send_put(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
 int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
 int COAP_set_server_addr(char *addr, int len);
+
 void COAP_free(void);
 
 #endif

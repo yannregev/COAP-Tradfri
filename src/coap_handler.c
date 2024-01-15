@@ -25,6 +25,8 @@ typedef struct {
 } CoapHeader;
 
 struct COAP_CTX *ctx;
+WSADATA wsaData;
+int sockfd;
 
 /**
  * Generate a random hex, used for token
@@ -66,6 +68,9 @@ static void print_res_code(int res_code)
         break;
     case 0x44:
         printf("2.04 Changed\n");
+        break;
+    case 0xa0:
+        printf("5.00 Internal server error\n");
         break;
     default:
         printf("Unknown\n");
@@ -138,11 +143,11 @@ static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, in
     CoapHeader header;
     header.version_type_token = 0x48;
     header.code = request_type;
-    header.message_id = msg_id;
-
+    header.message_id = (msg_id[0] << 8) | msg_id[1];
+    
     memcpy(buf, (uint8_t*)&header, 4);
     len += 4;
-    memcpy(buf+4, token, 8);
+    memcpy(buf + len, token, 8);
     len += 8;
 
     if (endpoint_len > 269)
@@ -156,7 +161,8 @@ static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, in
     else
     {
         char s[endpoint_len];
-        memcpy(s, endpoint, endpoint_len);
+        memcpy(s, endpoint, endpoint_len+1);
+        s[endpoint_len] = '\0';
         char *token = strtok(s, "/");
         uint8_t options = '\xB0';
         options |= strlen(token);
@@ -213,10 +219,10 @@ unsigned int psk_client_callback(SSL *ssl, const char *hint, char *identity,
     return key_len; // Length of the PSK in bytes
 }
 
-static int COAP_connect(WSADATA *wsaData, int *sockfd)
+int COAP_connect(void)
 {
     // Initialize Winsock
-    if (WSAStartup(MAKEWORD(2, 2), wsaData) != 0) {
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         printf("WSAStartup failed\n");
         return 1;
     }
@@ -230,31 +236,31 @@ static int COAP_connect(WSADATA *wsaData, int *sockfd)
         printf("getaddrinfo failed\n");
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
-        closesocket(*sockfd);
+        closesocket(sockfd);
         WSACleanup();
         return 2;
     }
 
     // Create a TCP socket
-    *sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (*sockfd == INVALID_SOCKET) {
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd == INVALID_SOCKET) {
         printf("Socket creation failed\n");
         WSACleanup();
         return 3;
     }
 
-    if (connect(*sockfd, res->ai_addr, (int)res->ai_addrlen) != 0) {
+    if (connect(sockfd, res->ai_addr, (int)res->ai_addrlen) != 0) {
         printf("Socket connection failed\n");
         freeaddrinfo(res);
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
-        closesocket(*sockfd);
+        closesocket(sockfd);
         WSACleanup();
         return 4;
     }
 
     // Attach the socket to the SSL structure
-    SSL_set_fd(ctx->ssl, *sockfd);
+    SSL_set_fd(ctx->ssl, sockfd);
 
     // Perform the TLS handshake
     if (SSL_connect(ctx->ssl) <= 0) {
@@ -324,6 +330,9 @@ int COAP_init(void)
         SSL_CTX_free(ctx->ssl_ctx);
         return 4;
     }
+
+    
+
 	return 0;
 }
 
@@ -365,13 +374,13 @@ int COAP_set_server_addr(char *addr, int len)
 int COAP_send_get(char *endpoint, int endpoint_len, char *response)
 {
 	if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
-	WSADATA wsaData;
-	int sockfd, rc;
+	
+	int rc;
 	
 	uint8_t buf[1024]; //Should be enough
 	int len = create_coap_header(buf, GET, endpoint, endpoint_len);
 
-	COAP_connect(&wsaData, &sockfd);
+	
 
 	rc = SSL_write(ctx->ssl, buf, len);
     if (rc <= 0) {
@@ -399,9 +408,7 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
         response[rc-1] = '\0';
     }
     
-    SSL_shutdown(ctx->ssl);
-    closesocket(sockfd);
-    WSACleanup();
+
     return rc;
 }
 
@@ -412,8 +419,7 @@ int COAP_send_put(char *endpoint,
                     char *response)
 {
     if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
-    WSADATA wsaData;
-    int sockfd, rc, offset;
+    int rc;
     
     uint8_t buf[1024]; //Should be enough
     int len = create_coap_header(buf, PUT, endpoint, endpoint_len);
@@ -422,8 +428,6 @@ int COAP_send_put(char *endpoint,
     buf[len++] = 0xFF; // Payload marker
     memcpy(buf + len, payload, payload_len);
     len += payload_len;
-
-    COAP_connect(&wsaData, &sockfd);
 
     rc = SSL_write(ctx->ssl, buf, len);
     if (rc <= 0) {
@@ -451,10 +455,6 @@ int COAP_send_put(char *endpoint,
         memcpy(response, ++ptr, rc); 
         response[rc-1] = '\0'; 
     }
-
-    SSL_shutdown(ctx->ssl);
-    closesocket(sockfd);
-    WSACleanup();
     return rc;
 }
 
@@ -466,9 +466,8 @@ int COAP_send_post(char *endpoint,
                     char *response)
 {
     if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
-    WSADATA wsaData;
     char *res_data;
-    int sockfd, rc, offset;
+    int rc;
     
     uint8_t buf[1024]; //Should be enough
     int len = create_coap_header(buf, POST, endpoint, endpoint_len);
@@ -477,8 +476,6 @@ int COAP_send_post(char *endpoint,
     buf[len++] = 0xFF; // Payload marker
     memcpy(buf + len, payload, payload_len);
     len += payload_len;
-
-    COAP_connect(&wsaData, &sockfd);
 
     rc = SSL_write(ctx->ssl, buf, len);
     if (rc <= 0) {
@@ -506,15 +503,14 @@ int COAP_send_post(char *endpoint,
         memcpy(response, ++ptr, rc); 
         response[rc-1] = '\0'; 
     }
-
-    SSL_shutdown(ctx->ssl);
-    closesocket(sockfd);
-    WSACleanup();
     return rc;
 }
 
 void COAP_free(void)
 {
+    SSL_shutdown(ctx->ssl);
+    closesocket(sockfd);
+    WSACleanup();
 	if (ctx->psk_identity) free(ctx->psk_identity);
 	if (ctx->psk_key) free(ctx->psk_key);
     if (ctx->ssl) SSL_free(ctx->ssl);

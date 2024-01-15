@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "tradfri.h"
 
@@ -24,7 +25,8 @@ int main(int argc, char** argv)
 	char *lamp_id;
 	char res[1024];
 	char input[100] = {0};
-	int value;
+	uint64_t value;
+	tradfri_init();
 	printOptions();
 
 	fgets(input, 100, stdin);
@@ -67,10 +69,22 @@ int main(int argc, char** argv)
 			}
 
 		}
+		else if (strncmp(input, "color ", 6) == 0)
+		{
+			
+			lamp_id = strtok(input+6, " ");
+			value = strtol(strtok(NULL, " "), NULL, 16);
+			{
+				tradfri_set_lamp_color(lamp_id, value, res);
+				printf("response = %s\n", res);
+			}
+
+		}
 		printf("input: ");
 		fgets(input, 100, stdin);
 		input[strcspn(input, "\n")] = '\0';	// Strip newline
 	}
 
+	tradfri_free();
 	return 0;
 }
