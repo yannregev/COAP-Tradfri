@@ -8,6 +8,7 @@
 
 #include "coap_handler.h"
 
+#define UNUSED(x) (void)(x)
 
 
 #define COAP_PORT "5684" // COAP port is always 5684?
@@ -93,9 +94,11 @@ static void parse_response_header(uint8_t **response, int *len)
     print_res_code(res_code);
     (*len)--;
     uint16_t res_msg_id = (*(*response) << 8) | *(*response);
+    UNUSED(res_msg_id);
     (*response)+=2;
     (*len) -=2;
     uint8_t res_token[res_token_len];
+    UNUSED(res_token);
     for (int i = 0; i < res_token_len; i++)
     {
         res_token[i] = *(*response)++;
@@ -138,7 +141,6 @@ static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, in
     int len = 0;
     generateRandomArray(TOKEN_LEN, token);
     generateRandomArray(2, msg_id);
-    char *coap_header = "\x48\x01\x12\x02";
 
     CoapHeader header;
     header.version_type_token = 0x48;
@@ -223,7 +225,7 @@ int COAP_connect(void)
 {
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        printf("WSAStartup failed\n");
+        fprintf(stderr, "WSAStartup failed\n");
         return 1;
     }
 
@@ -233,10 +235,9 @@ int COAP_connect(void)
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
  	if (getaddrinfo(ctx->server_addr, COAP_PORT, &hints, &res) != 0) {
-        printf("getaddrinfo failed\n");
+        fprintf(stderr, "getaddrinfo failed\n");
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
-        closesocket(sockfd);
         WSACleanup();
         return 2;
     }
@@ -244,17 +245,19 @@ int COAP_connect(void)
     // Create a TCP socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd == INVALID_SOCKET) {
-        printf("Socket creation failed\n");
+        fprintf(stderr, "Socket creation failed\n");
+        freeaddrinfo(res);
+        SSL_free(ctx->ssl);
+        SSL_CTX_free(ctx->ssl_ctx);
         WSACleanup();
         return 3;
     }
 
     if (connect(sockfd, res->ai_addr, (int)res->ai_addrlen) != 0) {
-        printf("Socket connection failed\n");
+        fprintf(stderr, "Socket connection failed\n");
         freeaddrinfo(res);
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
-        closesocket(sockfd);
         WSACleanup();
         return 4;
     }
@@ -264,12 +267,15 @@ int COAP_connect(void)
 
     // Perform the TLS handshake
     if (SSL_connect(ctx->ssl) <= 0) {
-        printf("SSL handshake failed\n");
+        fprintf(stderr, "SSL handshake failed\n");
         ERR_print_errors_fp(stderr);
+        closesocket(sockfd);
         SSL_free(ctx->ssl);
         SSL_CTX_free(ctx->ssl_ctx);
+        WSACleanup();
         return 5;
     }
+    freeaddrinfo(res);
     return 0;
 }
 
@@ -402,10 +408,12 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
 
     uint8_t *ptr = buf;
     parse_response_header(&ptr, &rc);
+    ptr++;
+    rc--;
     if (rc > 0)
     {
-        memcpy(response, ++ptr, rc); 
-        response[rc-1] = '\0';
+        memcpy(response, ptr, rc); 
+        response[rc] = '\0';
     }
     
 
@@ -446,14 +454,15 @@ int COAP_send_put(char *endpoint,
         close(sockfd);
         return -2;
     }
-    
+
     uint8_t *ptr = buf;
     parse_response_header(&ptr, &rc); 
- 
+    ptr++;
+    rc--;
     if (rc > 0)
     {
-        memcpy(response, ++ptr, rc); 
-        response[rc-1] = '\0'; 
+        memcpy(response, ptr, rc); 
+        response[rc] = '\0'; 
     }
     return rc;
 }
@@ -466,7 +475,6 @@ int COAP_send_post(char *endpoint,
                     char *response)
 {
     if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
-    char *res_data;
     int rc;
     
     uint8_t buf[1024]; //Should be enough
@@ -497,11 +505,12 @@ int COAP_send_post(char *endpoint,
 
     uint8_t *ptr = buf;
     parse_response_header(&ptr, &rc); 
- 
+    ptr++;
+    rc--; 
     if (rc > 0)
     {
-        memcpy(response, ++ptr, rc); 
-        response[rc-1] = '\0'; 
+        memcpy(response, ptr, rc); 
+        response[rc] = '\0'; 
     }
     return rc;
 }
@@ -513,6 +522,7 @@ void COAP_free(void)
     WSACleanup();
 	if (ctx->psk_identity) free(ctx->psk_identity);
 	if (ctx->psk_key) free(ctx->psk_key);
+    if (ctx->server_addr) free(ctx->server_addr);
     if (ctx->ssl) SSL_free(ctx->ssl);
     if (ctx->ssl_ctx) SSL_CTX_free(ctx->ssl_ctx);
     if (ctx) 

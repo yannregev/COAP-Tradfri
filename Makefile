@@ -14,6 +14,7 @@ OBJECTS  := $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 RM 	 := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
+
 $(BINDIR)/$(TARGET): $(OBJECTS)
 	@${MKDIR} $(@D)
 	@$(LINKER) $(OBJECTS) $(LFLAGS) -o $@
@@ -23,6 +24,18 @@ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
 	@${MKDIR} $(@D)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo "Compiled "$<" successfully!"
+
+.PHONY: build
+build: $(OBJECTS)
+
+.PHONY: all
+all: build
+all: $(BINDIR)/$(TARGET)
+
+.PHONY: debug
+debug: CFLAGS += -g -fno-inline -fno-omit-frame-pointer
+debug: $(OBJECTS)
+debug: $(BINDIR)/$(TARGET)
 
 .PHONY: clean
 clean:

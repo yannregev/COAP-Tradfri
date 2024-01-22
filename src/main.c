@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
 	fgets(input, 100, stdin);
 	input[strcspn(input, "\n")] = '\0';	// Strip newline
-	while (strncmp(input, "exit", 4) != 0)
+	while (strncmp(input, "exit", 4) != 0 && strncmp(input, "\0", 1) != 0)
 	{
 		if (strncmp(input, "get-all", 7) == 0)
 		{
@@ -75,12 +75,13 @@ int main(int argc, char** argv)
 			lamp_id = strtok(input+6, " ");
 			value = strtol(strtok(NULL, " "), NULL, 16);
 			{
-				tradfri_set_lamp_color(lamp_id, value, res);
+				tradfri_set_lamp_color(lamp_id, value, res, 1024);
 				printf("response = %s\n", res);
 			}
 
 		}
 		printf("input: ");
+		memset(input, '\0', 100);
 		fgets(input, 100, stdin);
 		input[strcspn(input, "\n")] = '\0';	// Strip newline
 	}
