@@ -6,7 +6,7 @@
 //Not too elegant but works for now
 //#include "../Credentials.txt"
 
-#define SERVER_IP "192.168.0.10"
+#define SERVER_IP "192.168.1.16"
 
 #define TURN_ON_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 1 }]}"
 #define TURN_OFF_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 0 }]}"
@@ -78,10 +78,10 @@ static void tradfri_register_identity(void)
 
 	int len = sprintf(payload, "{\"9090\" : \"%s\"}", identity);
 	printf("payload = %s\n\n",payload);
-	exit(1);
 	COAP_set_psk_key(key, strlen(key));
 	COAP_set_psk_identity(identity, strlen(identity));
 	len = COAP_send_post(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
+	
 	key = retrieve_key(response, len);
 	struct Credentials credentials;
 	credentials.identity = identity;

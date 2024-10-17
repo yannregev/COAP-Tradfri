@@ -14,26 +14,30 @@ int load_credentials(struct Credentials *cred)
 	cred->identity = malloc(100);
 	cred->key = malloc(100);
 
+	memset(cred->identity, '\0', 100);
+	memset(cred->key, '\0', 100);
+
 	if ((f = fopen(CREDENTIALS_PATH, "rb")) == NULL)
 	{
 		fprintf(stderr, "Failed to  open %s!\n", CREDENTIALS_PATH);
 		return -1;
 	} 
 
-	while ((ch = fgetc(f)) != '\0' && i < 100-1)
+	while ((ch = fgetc(f)) != ' ' && i < 100-1)
 	{
 		cred->identity[i++] = ch;
 	}
-	cred->identity[i] = '\0';
 	i = 0;
-	while ((ch = fgetc(f)) != '\0' && i < 100-1)
+	while ((ch = fgetc(f)) != ' ' && i < 100-1)
 	{
 		cred->key[i++] = ch;
 	}
-	cred->key[i] = '\0';
 
-	cred->identity = realloc(cred->identity, strlen(cred->identity+1));
-	cred->key = realloc(cred->key, strlen(cred->key+1));
+
+
+	cred->identity = realloc(cred->identity, strlen(cred->identity)+1);
+	cred->key = realloc(cred->key, strlen(cred->key)+1);
+	printf("identity: %s\nkey: %s\n", cred->identity, cred->key);
 
 	fclose(f);
 	return 0;
