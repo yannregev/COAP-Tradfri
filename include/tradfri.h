@@ -6,9 +6,9 @@
 int TradfriInit();
 void TradfriFree();
 int TradfriGetAllLamps(char* response);
-int TradfriGetLamp(char* lamp_id, char *response);
-int TradfriTurnOnLamp(char* lamp_id, char* response);
-int TradfriTurnOffLamp(char* lamp_id, char* response);
-int TradfriDimLamp(char* lamp_id, int dim, char* response);
-int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response);
+int TradfriGetLamp(char* lampId, char *response);
+int TradfriTurnOnLamp(char* lampId, char* response);
+int TradfriTurnOffLamp(char* lampId, char* response);
+int TradfriDimLamp(char* lampId, int dim, char* response);
+int TradfriSetLampColor(char* lampId, uint64_t color_hex, char *response);
 #endif

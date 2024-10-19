@@ -124,27 +124,27 @@ int TradfriGetAllLamps(char *response)
 	return CoapGetRequest("15001", strlen("15001"), response);
 }
 
-int TradfriGetLamp(char* lamp_id, char *response)
+int TradfriGetLamp(char* lampId, char *response)
 {
 	int len;
-	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
 	char endpoint[endpoint_len];
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+	strncat(endpoint, lampId, strlen(lampId) + 1);
 
 	len = CoapGetRequest(endpoint, strlen(endpoint), response);
 	return len;
 }
 
-int TradfriDimLamp(char* lamp_id, int dim, char* response)
+int TradfriDimLamp(char* lampId, int dim, char* response)
 {
 	int len;
-	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
 	char endpoint[endpoint_len];
 	char payload[strlen(DIM_LAMP_PAYLOAD) + 4];
 
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+	strncat(endpoint, lampId, strlen(lampId) + 1);
 
 
 	len = snprintf(payload, strlen(DIM_LAMP_PAYLOAD) + 4, DIM_LAMP_PAYLOAD, dim);
@@ -152,40 +152,40 @@ int TradfriDimLamp(char* lamp_id, int dim, char* response)
     return len;
 }
 
-int TradfriTurnOnLamp(char* lamp_id, char *response)
+int TradfriTurnOnLamp(char* lampId, char *response)
 {
 	int len;
-	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
 	char endpoint[endpoint_len];
 	
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+	strncat(endpoint, lampId, strlen(lampId) + 1);
 
     len = CoapPutRequest(endpoint, strlen(endpoint), TURN_ON_LAMP_PAYLOAD, strlen(TURN_ON_LAMP_PAYLOAD), response);
     return len;
 }
 
-int TradfriTurnOffLamp(char* lamp_id, char *response)
+int TradfriTurnOffLamp(char* lampId, char *response)
 {
 	int len;
-	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
 	char endpoint[endpoint_len];
 	
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+	strncat(endpoint, lampId, strlen(lampId) + 1);
 	len = CoapPutRequest(endpoint, strlen(endpoint), TURN_OFF_LAMP_PAYLOAD, strlen(TURN_OFF_LAMP_PAYLOAD), response);
 	return len;
 }
 
-int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response)
+int TradfriSetLampColor(char* lampId, uint64_t color_hex, char *response)
 {
 	int len;
-	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
+	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
 	char endpoint[endpoint_len];
 	char payload[strlen(COLOR_LAMP_PAYLOAD) + 7];
 
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
+	strncat(endpoint, lampId, strlen(lampId) + 1);
 
 	len = snprintf(payload, strlen(COLOR_LAMP_PAYLOAD) + 7, COLOR_LAMP_PAYLOAD, (uint32_t)color_hex);
 	len = CoapPutRequest(endpoint, strlen(endpoint), payload, strlen(payload), response);

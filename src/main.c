@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include "tradfri.h"
 
@@ -22,21 +23,30 @@ static int HandleGetAllCommand(char *arg, char *res)
 
 static int HandleDimCommand(char *arg, char *res) 
 {
-	char *lamp_id = strtok(arg, " ");
+	char *lampId = strtok(arg, " ");
+	errno = 0;
 	int value = atoi(strtok(NULL, " "));
-	if (value < 0 || value > 254) 
+	if (errno || value < 0 || value > 254) 
 	{ 
 		printf("Illegal dim value!\n");
 		return -1;
 	}
-	return TradfriDimLamp(lamp_id, value, res);
+	return TradfriDimLamp(lampId, value, res);
 }
 
 static int HandleColorCommand(char *arg, char *res) 
 {
-	char *lamp_id = strtok(arg, " ");
-	uint16_t value = strtol(strtok(NULL, " "), NULL, 16);
-	return TradfriSetLampColor(lamp_id, value, res);
+	char *lampId = strtok(arg, " ");
+	char *token = strtok(NULL, " ");
+
+	errno = 0;
+	uint16_t value = strtol(token, NULL, 16);
+	if (errno)
+	{
+		printf("Illegal color value!\n");
+		return -2;
+	}
+	return TradfriSetLampColor(lampId, value, res);
 }
 
 typedef int (*CommandFunc)(char *arg, char *res);
@@ -56,17 +66,17 @@ Command_t commandTable[] = {
 	{COLOR, HandleColorCommand, strlen(COLOR) + 1},
 };
 
-static void parseAndExecuteCommand(char *input, char *res)
+static int parseAndExecuteCommand(char *input, char *res)
 {
 	for (int i = 0; i < sizeof(commandTable) / sizeof(Command_t); ++i)
 	{
 		const char* command = commandTable[i].command;
 		if (strncmp(input, command, strlen(command)) == 0) 
 		{
-			commandTable[i].func(input + commandTable[i].argOffset, res);
-			return;
+			return commandTable[i].func(input + commandTable[i].argOffset, res);
 		}
 	}
+	return -1;
 }
 
 static void printOptions(void)
@@ -93,8 +103,10 @@ int main(int argc, char** argv)
 	input[strcspn(input, "\n")] = '\0';	// Strip newline
 	while (strncmp(input, "exit", 4) != 0)
 	{
-		parseAndExecuteCommand(input, res);
-		printf("Response = %s\n", res);
+		if (parseAndExecuteCommand(input, res) == 0)
+		{
+			printf("Response = %s\n", res);
+		}
 		printf(INPUT);
 		memset(input, '\0', 100);
 		fgets(input, 100, stdin);
