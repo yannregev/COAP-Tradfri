@@ -164,10 +164,9 @@ static int CreateCoapHeader(uint8_t *buf, int request_type, char *endpoint, int 
     }
     else
     {
-        char s[endpoint_len];
-        memcpy(s, endpoint, endpoint_len+1);
-        s[endpoint_len] = '\0';
-        char *token = strtok(s, "/");
+        char endpointCopy[endpoint_len];
+        strncpy(endpointCopy, endpoint, endpoint_len+1);
+        char *token = strtok(endpointCopy, "/");
         uint8_t options = '\xB0';
         options |= strlen(token);
         memcpy(buf + len, &options, 1);
@@ -350,9 +349,7 @@ int CoapSetPskKey(char *key, int len)
 	if (len <= 0) return 2;
 	ctx->psk_len = len;
 	ctx->psk_key = malloc(len+1);
-
-	memcpy(ctx->psk_key, key, len);
-    ctx->psk_key[len] = '\0';
+    strncpy(ctx->psk_key, key, len+1);
 	return 0;
 }
 
@@ -362,8 +359,7 @@ int CoapSetPskIdentity(char *identity, int len)
 	if (len <= 0) return 2;
 	ctx->identity_len = len;
 	ctx->psk_identity = malloc(len+1);
-	memcpy(ctx->psk_identity, identity, len);
-    ctx->psk_identity[len] = '\0';
+    strncpy(ctx->psk_identity, identity, len+1);
 	return 0;
 }
 
@@ -373,8 +369,7 @@ int CoapSetServerAddr(char *addr, int len)
 	if (len <= 0) return 2;
 	ctx->addr_len = len;
 	ctx->server_addr = malloc(len+1);
-	memcpy(ctx->server_addr, addr, len);
-    ctx->server_addr[len] = '\0';
+    strncpy(ctx->server_addr, addr, len+1);
 	return 0;
 }
 
@@ -387,8 +382,6 @@ int CoapGetRequest(char *endpoint, int endpoint_len, char *response)
 	
 	uint8_t buf[1024]; //Should be enough
 	int len = CreateCoapHeader(buf, GET, endpoint, endpoint_len);
-
-	
 
 	rc = SSL_write(ctx->ssl, buf, len);
     if (rc <= 0) {
