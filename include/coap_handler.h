@@ -6,7 +6,7 @@
 #include <assert.h>
 
 
-struct COAP_CTX
+struct COAP_CTX_t
 {
 	char *psk_identity;
 	int identity_len;
@@ -19,15 +19,15 @@ struct COAP_CTX
 };
 
 
-int COAP_init(void);
-int COAP_connect(void);
-int COAP_set_psk_key(char *key, int len);
-int COAP_set_psk_identity(char *identity, int len);
-int COAP_send_get(char *endpoint, int endpoint_len, char *response);
-int COAP_send_put(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
-int COAP_send_post(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
-int COAP_set_server_addr(char *addr, int len);
+int CoapInit(void);
+int CoapConnect(void);
+int CoapSetPskKey(char *key, int len);
+int CoapSetPskIdentity(char *identity, int len);
+int CoapGetRequest(char *endpoint, int endpoint_len, char *response);
+int CoapPutRequest(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
+int CoapPostRequest(char *endpoint, int endpoint_len, char*payload, int payload_len, char *response);
+int CoapSetServerAddr(char *addr, int len);
 
-void COAP_free(void);
+void CoapFree(void);
 
 #endif

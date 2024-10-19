@@ -7,8 +7,8 @@ struct Credentials
 	char *key;
 };
 
-int load_credentials(struct Credentials *cred);
+int LoadCredentials(struct Credentials *cred);
 
-int store_credentials(struct Credentials cred);
+int StoreCredentials(struct Credentials cred);
 
 #endif //FILE_HANDER_H_

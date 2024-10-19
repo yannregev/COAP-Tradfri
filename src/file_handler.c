@@ -4,9 +4,9 @@
 
 #include "file_handler.h"
 
-#define CREDENTIALS_PATH "Credentials.txt"
+#define CREDENTIALS_PATH "./Credentials.txt"
 
-int load_credentials(struct Credentials *cred)
+int LoadCredentials(struct Credentials *cred)
 {
 	FILE *f;
 	char ch;
@@ -43,7 +43,7 @@ int load_credentials(struct Credentials *cred)
 	return 0;
 }
 
-int store_credentials(const struct Credentials cred)
+int StoreCredentials(const struct Credentials cred)
 {
 
 	FILE *f;
@@ -54,18 +54,21 @@ int store_credentials(const struct Credentials cred)
 		return -1;
 	} 
 
- 	if (fwrite(cred.identity, sizeof(char), strlen(cred.identity)+1,  f) != strlen(cred.identity)+1)
+ 	if (fwrite(cred.identity, sizeof(char), strlen(cred.identity),  f) != strlen(cred.identity))
  	{
  		fprintf(stderr, "Failed to write identity!\n");
  		fclose(f);
  		return -2;
  	}
- 	if (fwrite(cred.key, sizeof(char), strlen(cred.key)+1,  f) != strlen(cred.key)+1)
+ 	fwrite(" ", sizeof(char), 1, f);
+
+ 	if (fwrite(cred.key, sizeof(char), strlen(cred.key),  f) != strlen(cred.key))
  	{
  		fprintf(stderr, "Failed to write identity!\n");
  		fclose(f);
  		return -3;
  	}
+	fwrite(" ", sizeof(char), 1, f);
 
 	fclose(f);
 	return 0;

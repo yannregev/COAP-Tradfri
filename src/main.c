@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 	char res[1024];
 	char input[100] = {0};
 	uint64_t value;
-	tradfri_init();
+	TradfriInit();
 	printOptions();
 
 	fgets(input, 100, stdin);
@@ -46,22 +46,22 @@ int main(int argc, char** argv)
 	{
 		if (strncmp(input, GET_ALL, strlen(GET_ALL)) == 0)
 		{
-			tradfri_get_all_lamps(res);
+			TradfriGetAllLamps(res);
 			printf("response = %s\n", res);
 		}
 		else if (strncmp(input, GET, strlen(GET)) == 0)
 		{
-			tradfri_get_lamp(input + strlen(GET), res);
+			TradfriGetLamp(input + strlen(GET), res);
 			printf("response = %s\n", res);
 		}
 		else if (strncmp(input, TURN_OFF, strlen(TURN_OFF)) == 0)
 		{
-			tradfri_turn_off_lamp(input + strlen(TURN_OFF), res);
+			TradfriTurnOffLamp(input + strlen(TURN_OFF), res);
 			//printf("response = %s\n", res);
 		}
 		else if (strncmp(input, TURN_ON, strlen(TURN_ON)) == 0)
 		{
-			tradfri_turn_on_lamp(input + strlen(TURN_ON), res);
+			TradfriTurnOnLamp(input + strlen(TURN_ON), res);
 			//printf("response = %s\n", res);
 		}
 		else if (strncmp(input, DIM, strlen(DIM)) == 0)
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				tradfri_dim_lamp(lamp_id, value, res);
+				TradfriDimLamp(lamp_id, value, res);
 				printf("response = %s\n", res);
 			}
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 			lamp_id = strtok(input + strlen(COLOR), " ");
 			value = strtol(strtok(NULL, " "), NULL, 16);
 			{
-				tradfri_set_lamp_color(lamp_id, value, res, 1024);
+				TradfriSetLampColor(lamp_id, value, res, 1024);
 				printf("response = %s\n", res);
 			}
 
@@ -98,6 +98,6 @@ int main(int argc, char** argv)
 	}
 
 	printf(EXIT);
-	tradfri_free();
+	TradfriFree();
 	return 0;
 }

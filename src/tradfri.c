@@ -17,7 +17,7 @@
 #define REGISTER_ENDPOINT "15001/9063"
 #define DEFAULT_PATH "15001/"
 
-static char* retrieve_key(char* data, int len)
+static char* RetrieveKey(char* data, int len)
 {
 	fprintf(stderr, "Not implemented!\n");
 	exit(1);
@@ -40,7 +40,7 @@ static char* retrieve_key(char* data, int len)
 	return res;
 }
 
-static void generate_identity(char *hexArray, int size)
+static void GenerateIdentity(char *hexArray, int size)
 {
     for (int i = 0; i < size; ++i) {
         int randomType = rand() % 3;
@@ -62,7 +62,7 @@ static void generate_identity(char *hexArray, int size)
 /**
  *	TODO: Read security key from usere 
  **/
-static void tradfri_register_identity(void)
+static void TradfriRegisterIdentity(void)
 {
 	char payload[100];
 	char response[100];
@@ -72,41 +72,41 @@ static void tradfri_register_identity(void)
 	fprintf(stdout, "Enter tradfri security key:\n");
 	fgets(key, 100, stdin);
 	key[strcspn(key, "\n")] = 0;
-	generate_identity(identity, 14);
+	GenerateIdentity(identity, 14);
 	identity[14] = '\0';
 
 
 	int len = sprintf(payload, "{\"9090\" : \"%s\"}", identity);
 	printf("payload = %s\n\n",payload);
-	COAP_set_psk_key(key, strlen(key));
-	COAP_set_psk_identity(identity, strlen(identity));
-	len = COAP_send_post(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
+	CoapSetPskKey(key, strlen(key));
+	CoapSetPskIdentity(identity, strlen(identity));
+	len = CoapPostRequest(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
 	
-	key = retrieve_key(response, len);
+	key = RetrieveKey(response, len);
 	struct Credentials credentials;
 	credentials.identity = identity;
 	credentials.key = key;
-	store_credentials(credentials);
+	StoreCredentials(credentials);
 }
 
-int tradfri_init()
+int TradfriInit()
 {
     // Seed the random number generator
     srand(time(NULL));
 	struct Credentials credentials;
-	assert(COAP_init() == 0);
-	if (load_credentials(&credentials) != 0)
+	assert(CoapInit() == 0);
+	if (LoadCredentials(&credentials) != 0)
 	{
-		tradfri_register_identity();
+		TradfriRegisterIdentity();
 	}
 	else
 	{
-		COAP_set_psk_key(credentials.key, strlen(credentials.key));
-		COAP_set_psk_identity(credentials.identity, strlen(credentials.identity));
+		CoapSetPskKey(credentials.key, strlen(credentials.key));
+		CoapSetPskIdentity(credentials.identity, strlen(credentials.identity));
 	}
 
-	COAP_set_server_addr(SERVER_IP, strlen(SERVER_IP));
-	assert(COAP_connect() == 0);
+	CoapSetServerAddr(SERVER_IP, strlen(SERVER_IP));
+	assert(CoapConnect() == 0);
 
 	free(credentials.key);
 	free(credentials.identity);
@@ -114,17 +114,17 @@ int tradfri_init()
 	return 0;
 }
 
-void tradfri_free()
+void TradfriFree()
 {
-	COAP_free();
+	CoapFree();
 }
 
-int tradfri_get_all_lamps(char *response)
+int TradfriGetAllLamps(char *response)
 {
-	return COAP_send_get("15001", strlen("15001"), response);
+	return CoapGetRequest("15001", strlen("15001"), response);
 }
 
-int tradfri_get_lamp(char* lamp_id, char *response)
+int TradfriGetLamp(char* lamp_id, char *response)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
@@ -132,11 +132,11 @@ int tradfri_get_lamp(char* lamp_id, char *response)
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
 	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
 
-	len = COAP_send_get(endpoint, strlen(endpoint), response);
+	len = CoapGetRequest(endpoint, strlen(endpoint), response);
 	return len;
 }
 
-int tradfri_dim_lamp(char* lamp_id, int dim, char* response)
+int TradfriDimLamp(char* lamp_id, int dim, char* response)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
@@ -148,11 +148,11 @@ int tradfri_dim_lamp(char* lamp_id, int dim, char* response)
 
 
 	len = snprintf(payload, strlen(DIM_LAMP_PAYLOAD) + 4, DIM_LAMP_PAYLOAD, dim);
-    len = COAP_send_put(endpoint, strlen(endpoint), payload, len, response);
+    len = CoapPutRequest(endpoint, strlen(endpoint), payload, len, response);
     return len;
 }
 
-int tradfri_turn_on_lamp(char* lamp_id, char *response)
+int TradfriTurnOnLamp(char* lamp_id, char *response)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
@@ -161,11 +161,11 @@ int tradfri_turn_on_lamp(char* lamp_id, char *response)
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
 	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
 
-    len = COAP_send_put(endpoint, strlen(endpoint), TURN_ON_LAMP_PAYLOAD, strlen(TURN_ON_LAMP_PAYLOAD), response);
+    len = CoapPutRequest(endpoint, strlen(endpoint), TURN_ON_LAMP_PAYLOAD, strlen(TURN_ON_LAMP_PAYLOAD), response);
     return len;
 }
 
-int tradfri_turn_off_lamp(char* lamp_id, char *response)
+int TradfriTurnOffLamp(char* lamp_id, char *response)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
@@ -173,11 +173,11 @@ int tradfri_turn_off_lamp(char* lamp_id, char *response)
 	
 	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
 	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
-	len = COAP_send_put(endpoint, strlen(endpoint), TURN_OFF_LAMP_PAYLOAD, strlen(TURN_OFF_LAMP_PAYLOAD), response);
+	len = CoapPutRequest(endpoint, strlen(endpoint), TURN_OFF_LAMP_PAYLOAD, strlen(TURN_OFF_LAMP_PAYLOAD), response);
 	return len;
 }
 
-int tradfri_set_lamp_color(char* lamp_id, uint64_t color_hex, char *response, int res_len)
+int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response, int res_len)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;
@@ -188,6 +188,6 @@ int tradfri_set_lamp_color(char* lamp_id, uint64_t color_hex, char *response, in
 	strncat(endpoint, lamp_id, strlen(lamp_id) + 1);
 
 	len = snprintf(payload, strlen(COLOR_LAMP_PAYLOAD) + 7, COLOR_LAMP_PAYLOAD, (uint32_t)color_hex);
-	len = COAP_send_put(endpoint, strlen(endpoint), payload, strlen(payload), response);
+	len = CoapPutRequest(endpoint, strlen(endpoint), payload, strlen(payload), response);
     return len;
 }

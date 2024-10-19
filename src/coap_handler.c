@@ -14,6 +14,7 @@
 #define COAP_PORT "5684" // COAP port is always 5684?
 
 #define TOKEN_LEN 8
+#define ID_LEN    2
 
 #define GET 	1
 #define POST 	2
@@ -25,14 +26,14 @@ typedef struct {
     uint16_t message_id;
 } CoapHeader;
 
-struct COAP_CTX *ctx;
+struct COAP_CTX_t *ctx;
 WSADATA wsaData;
 int sockfd;
 
 /**
  * Generate a random hex, used for token
  **/
-static void generateRandomArray(int size, uint8_t *hexArray) 
+static void GenerateRandomArray(int size, uint8_t *hexArray) 
 {
     if (size <= 0) 
     {
@@ -53,7 +54,7 @@ static void generateRandomArray(int size, uint8_t *hexArray)
     }
 }
 
-static void print_res_code(int res_code) 
+static void PrintResCode(int res_code) 
 {
     printf("Code: ");
     switch(res_code)
@@ -91,7 +92,7 @@ static void parse_response_header(uint8_t **response, int *len)
     (*len)--;
     uint8_t res_token_len = res_header & 0x0F;
     uint8_t res_code = *(*response)++;
-    print_res_code(res_code);
+    PrintResCode(res_code);
     (*len)--;
     uint16_t res_msg_id = (*(*response) << 8) | *(*response);
     UNUSED(res_msg_id);
@@ -134,13 +135,14 @@ static void parse_response_header(uint8_t **response, int *len)
     }
 }
 
-static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, int endpoint_len)
+static int CreateCoapHeader(uint8_t *buf, int request_type, char *endpoint, int endpoint_len)
 {
     uint8_t token[TOKEN_LEN];
-    uint8_t msg_id[2];
+    uint8_t msg_id[ID_LEN];
     int len = 0;
-    generateRandomArray(TOKEN_LEN, token);
-    generateRandomArray(2, msg_id);
+
+    GenerateRandomArray(TOKEN_LEN, token);
+    GenerateRandomArray(ID_LEN, msg_id);
 
     CoapHeader header;
     header.version_type_token = 0x48;
@@ -154,11 +156,11 @@ static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, in
 
     if (endpoint_len > 269)
     {
-        //Won't happen?
+        //Should not happend with tradfi communication
     }
     else if (endpoint_len > 13)
     {
-        //Won't happen?
+        //Should not happend with tradfi communication
     }
     else
     {
@@ -189,7 +191,7 @@ static int create_coap_header(uint8_t *buf, int request_type, char *endpoint, in
  * Callback function used for DTLS psk handshake
  * Uses the pre-shared key and identity
  **/
-unsigned int psk_client_callback(SSL *ssl, const char *hint, char *identity,
+unsigned int PskClientCallback(SSL *ssl, const char *hint, char *identity,
                                  unsigned int max_identity_len,
                                  unsigned char *psk,
                                  unsigned int max_psk_len) {
@@ -221,7 +223,7 @@ unsigned int psk_client_callback(SSL *ssl, const char *hint, char *identity,
     return key_len; // Length of the PSK in bytes
 }
 
-int COAP_connect(void)
+int CoapConnect(void)
 {
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -279,14 +281,14 @@ int COAP_connect(void)
     return 0;
 }
 
-int COAP_init(void)
+int CoapInit(void)
 {
     if (ctx != NULL)
     {
         fprintf(stderr, "COAP_init called twice!\n");
         return 1;
     }
-	ctx = malloc(sizeof(struct COAP_CTX));
+	ctx = (struct COAP_CTX_t*)malloc(sizeof(struct COAP_CTX_t));
 	ctx->psk_key = NULL;
 	ctx->psk_identity = NULL;
 	ctx->server_addr = NULL;
@@ -325,7 +327,7 @@ int COAP_init(void)
     // Set the options compatible with Tradfri
 	SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION | SSL_OP_NO_EXTENDED_MASTER_SECRET | SSL_OP_NO_TICKET | SSL_OP_NO_ENCRYPT_THEN_MAC);
     // Set PSK callback
-    SSL_CTX_set_psk_client_callback(ctx->ssl_ctx, psk_client_callback);
+    SSL_CTX_set_psk_client_callback(ctx->ssl_ctx, PskClientCallback);
 
     SSL_CTX_set_security_level(ctx->ssl_ctx, 0);	// Tradfri uses DTLSv_1.2 requiring the use of less secure communication
 
@@ -342,7 +344,7 @@ int COAP_init(void)
 	return 0;
 }
 
-int COAP_set_psk_key(char *key, int len)
+int CoapSetPskKey(char *key, int len)
 {
 	if (ctx == NULL) return 1;
 	if (len <= 0) return 2;
@@ -354,7 +356,7 @@ int COAP_set_psk_key(char *key, int len)
 	return 0;
 }
 
-int COAP_set_psk_identity(char *identity, int len)
+int CoapSetPskIdentity(char *identity, int len)
 {
 	if (ctx == NULL) return 1;
 	if (len <= 0) return 2;
@@ -365,7 +367,7 @@ int COAP_set_psk_identity(char *identity, int len)
 	return 0;
 }
 
-int COAP_set_server_addr(char *addr, int len)
+int CoapSetServerAddr(char *addr, int len)
 {
 	if (ctx == NULL) return 1;
 	if (len <= 0) return 2;
@@ -377,14 +379,14 @@ int COAP_set_server_addr(char *addr, int len)
 }
 
 
-int COAP_send_get(char *endpoint, int endpoint_len, char *response)
+int CoapGetRequest(char *endpoint, int endpoint_len, char *response)
 {
 	if (ctx->psk_key == NULL || ctx->server_addr == NULL || ctx->psk_identity == NULL) { return 1;}
 	
 	int rc;
 	
 	uint8_t buf[1024]; //Should be enough
-	int len = create_coap_header(buf, GET, endpoint, endpoint_len);
+	int len = CreateCoapHeader(buf, GET, endpoint, endpoint_len);
 
 	
 
@@ -420,7 +422,7 @@ int COAP_send_get(char *endpoint, int endpoint_len, char *response)
     return rc;
 }
 
-int COAP_send_put(char *endpoint, 
+int CoapPutRequest(char *endpoint, 
         int endpoint_len, 
             char*payload,    
                 int payload_len,
@@ -430,7 +432,7 @@ int COAP_send_put(char *endpoint,
     int rc;
     
     uint8_t buf[1024]; //Should be enough
-    int len = create_coap_header(buf, PUT, endpoint, endpoint_len);
+    int len = CreateCoapHeader(buf, PUT, endpoint, endpoint_len);
     
     buf[len++] = 0X10; // Plain text option
     buf[len++] = 0xFF; // Payload marker
@@ -468,7 +470,7 @@ int COAP_send_put(char *endpoint,
 }
 
 
-int COAP_send_post(char *endpoint, 
+int CoapPostRequest(char *endpoint, 
         int endpoint_len, 
             char*payload,    
                 int payload_len,
@@ -478,7 +480,7 @@ int COAP_send_post(char *endpoint,
     int rc;
     
     uint8_t buf[1024]; //Should be enough
-    int len = create_coap_header(buf, POST, endpoint, endpoint_len);
+    int len = CreateCoapHeader(buf, POST, endpoint, endpoint_len);
 
     buf[len++] = 0X10; // Plain text option
     buf[len++] = 0xFF; // Payload marker
@@ -515,7 +517,7 @@ int COAP_send_post(char *endpoint,
     return rc;
 }
 
-void COAP_free(void)
+void CoapFree(void)
 {
     SSL_shutdown(ctx->ssl);
     closesocket(sockfd);
