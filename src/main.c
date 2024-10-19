@@ -84,8 +84,8 @@ static void printOptions(void)
 	printf(	"Enter one of the following options:\n"
 			"	*\"get-all\" : get all lamps registered with tradfri\n"
 			"	*\"get <lamp-id>\" : get data about a specific\n"
-			"	*\"Turn-on <lamp-id>\": Turn on a lamp\n"
-			"	*\"Turn-off <lamp-id>\": Turn off a lamp\n"
+			"	*\"turn-on <lamp-id>\": Turn on a lamp\n"
+			"	*\"turn-off <lamp-id>\": Turn off a lamp\n"
 			"	*\"dim <lamp-id> <value>\": change the lamp dimmnes\n"
 			"	*\"color <lamp-id> <hex>\": Change lamp color\n"
 			"	*\"exit\": quit program\n"
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 	input[strcspn(input, "\n")] = '\0';	// Strip newline
 	while (strncmp(input, "exit", 4) != 0)
 	{
-		if (parseAndExecuteCommand(input, res) == 0)
+		if (parseAndExecuteCommand(input, res) >= 0)
 		{
 			printf("Response = %s\n", res);
 		}

@@ -1,14 +1,13 @@
 #ifndef FILE_HANDER_H_
 #define FILE_HANDER_H_
 
-struct Credentials
-{
+typedef struct {
 	char *identity;
 	char *key;
-};
+}Credentials_t;
 
-int LoadCredentials(struct Credentials *cred);
+int LoadCredentials(Credentials_t *cred);
 
-int StoreCredentials(struct Credentials cred);
+int StoreCredentials(Credentials_t cred);
 
 #endif //FILE_HANDER_H_

@@ -83,7 +83,7 @@ static void TradfriRegisterIdentity(void)
 	len = CoapPostRequest(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
 	
 	key = RetrieveKey(response, len);
-	struct Credentials credentials;
+	Credentials_t credentials;
 	credentials.identity = identity;
 	credentials.key = key;
 	StoreCredentials(credentials);
@@ -93,7 +93,7 @@ int TradfriInit()
 {
     // Seed the random number generator
     srand(time(NULL));
-	struct Credentials credentials;
+	Credentials_t credentials;
 	assert(CoapInit() == 0);
 	if (LoadCredentials(&credentials) != 0)
 	{
@@ -127,67 +127,54 @@ int TradfriGetAllLamps(char *response)
 int TradfriGetLamp(char* lampId, char *response)
 {
 	int len;
-	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
-	char endpoint[endpoint_len];
-	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lampId, strlen(lampId) + 1);
-
+	int endpointLen = strlen(lampId) + strlen(DEFAULT_PATH);
+	char endpoint[endpointLen + 1];
+	snprintf(endpoint, sizeof(endpoint), "%s%s", DEFAULT_PATH, lampId);
 	len = CoapGetRequest(endpoint, strlen(endpoint), response);
 	return len;
 }
 
-int TradfriDimLamp(char* lampId, int dim, char* response)
+int TradfriDimLamp(char* lampId, uint8_t dim, char* response)
 {
-	int len;
-	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
-	char endpoint[endpoint_len];
-	char payload[strlen(DIM_LAMP_PAYLOAD) + 4];
+	const uint8_t MAX_DIM_LEN = 3; // Dim can only be upto 3 digits long
 
-	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lampId, strlen(lampId) + 1);
+	int endpointLen = strlen(lampId) + strlen(DEFAULT_PATH) + 1;
+	int payloadLen = strlen(DIM_LAMP_PAYLOAD) + MAX_DIM_LEN + 1;
 
+	char endpoint[endpointLen];
+	char payload[payloadLen];
 
-	len = snprintf(payload, strlen(DIM_LAMP_PAYLOAD) + 4, DIM_LAMP_PAYLOAD, dim);
-    len = CoapPutRequest(endpoint, strlen(endpoint), payload, len, response);
-    return len;
+	snprintf(endpoint, sizeof(endpoint), "%s%s", DEFAULT_PATH, lampId);
+	snprintf(payload, sizeof(payload), DIM_LAMP_PAYLOAD, dim);
+    return CoapPutRequest(endpoint, strlen(endpoint), payload, strlen(payload), response);
 }
 
 int TradfriTurnOnLamp(char* lampId, char *response)
 {
-	int len;
-	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
-	char endpoint[endpoint_len];
+	int endpointLen = strlen(lampId) + strlen(DEFAULT_PATH) + 1;
+	char endpoint[endpointLen];
 	
-	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lampId, strlen(lampId) + 1);
-
-    len = CoapPutRequest(endpoint, strlen(endpoint), TURN_ON_LAMP_PAYLOAD, strlen(TURN_ON_LAMP_PAYLOAD), response);
-    return len;
+	snprintf(endpoint, sizeof(endpoint), "%s%s", DEFAULT_PATH, lampId);
+    return CoapPutRequest(endpoint, strlen(endpoint), TURN_ON_LAMP_PAYLOAD, strlen(TURN_ON_LAMP_PAYLOAD), response);
 }
 
 int TradfriTurnOffLamp(char* lampId, char *response)
 {
-	int len;
-	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
-	char endpoint[endpoint_len];
-	
-	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lampId, strlen(lampId) + 1);
-	len = CoapPutRequest(endpoint, strlen(endpoint), TURN_OFF_LAMP_PAYLOAD, strlen(TURN_OFF_LAMP_PAYLOAD), response);
-	return len;
+	int endpointLen = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
+	char endpoint[endpointLen];
+
+	snprintf(endpoint, sizeof(endpoint), "%s%s", DEFAULT_PATH, lampId);
+	return CoapPutRequest(endpoint, strlen(endpoint), TURN_OFF_LAMP_PAYLOAD, strlen(TURN_OFF_LAMP_PAYLOAD), response);
 }
 
 int TradfriSetLampColor(char* lampId, uint64_t color_hex, char *response)
 {
-	int len;
-	int endpoint_len = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
-	char endpoint[endpoint_len];
-	char payload[strlen(COLOR_LAMP_PAYLOAD) + 7];
+	const int MAX_COLOR_HEX_LEN = 6;
+	int endpointLen = strlen(lampId)+strlen(DEFAULT_PATH) + 1;
+	char endpoint[endpointLen];
+	char payload[strlen(COLOR_LAMP_PAYLOAD) + MAX_COLOR_HEX_LEN + 1];
 
-	strncpy(endpoint, DEFAULT_PATH, strlen(DEFAULT_PATH) + 1);
-	strncat(endpoint, lampId, strlen(lampId) + 1);
-
-	len = snprintf(payload, strlen(COLOR_LAMP_PAYLOAD) + 7, COLOR_LAMP_PAYLOAD, (uint32_t)color_hex);
-	len = CoapPutRequest(endpoint, strlen(endpoint), payload, strlen(payload), response);
-    return len;
+	snprintf(endpoint, sizeof(endpoint), "%s%s", DEFAULT_PATH, lampId);
+	snprintf(payload, strlen(COLOR_LAMP_PAYLOAD) + 7, COLOR_LAMP_PAYLOAD, (uint32_t)color_hex);
+	return CoapPutRequest(endpoint, strlen(endpoint), payload, strlen(payload), response);
 }

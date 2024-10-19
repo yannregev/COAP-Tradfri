@@ -6,7 +6,7 @@
 
 #define CREDENTIALS_PATH "./Credentials.txt"
 
-int LoadCredentials(struct Credentials *cred)
+int LoadCredentials(Credentials_t *cred)
 {
 	FILE *f;
 	char ch;
@@ -43,7 +43,7 @@ int LoadCredentials(struct Credentials *cred)
 	return 0;
 }
 
-int StoreCredentials(const struct Credentials cred)
+int StoreCredentials(const Credentials_t cred)
 {
 
 	FILE *f;
