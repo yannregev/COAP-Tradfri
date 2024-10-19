@@ -24,7 +24,7 @@ typedef struct {
     uint8_t version_type_token;
     uint8_t code;
     uint16_t message_id;
-} CoapHeader;
+} CoapHeader_t;
 
 CoapCtx_t *ctx;
 WSADATA wsaData;
@@ -144,7 +144,7 @@ static int CreateCoapHeader(uint8_t *buf, int request_type, char *endpoint, int 
     GenerateRandomArray(TOKEN_LEN, token);
     GenerateRandomArray(ID_LEN, msg_id);
 
-    CoapHeader header;
+    CoapHeader_t header;
     header.version_type_token = 0x48;
     header.code = request_type;
     header.message_id = (msg_id[0] << 8) | msg_id[1];
@@ -187,8 +187,8 @@ static int CreateCoapHeader(uint8_t *buf, int request_type, char *endpoint, int 
 }
 
 /**
- * Callback function used for DTLS psk handshake
- * Uses the pre-shared key and identity
+  * Callback function used for DTLS psk handshake
+  * Uses the pre-shared key and identity
  **/
 unsigned int PskClientCallback(SSL *ssl, const char *hint, char *identity,
                                  unsigned int max_identity_len,
@@ -199,7 +199,7 @@ unsigned int PskClientCallback(SSL *ssl, const char *hint, char *identity,
     long key_len = ctx->psk_len;
     unsigned char *key;
 
-    snprintf(identity, max_identity_len, "%s", psk_identity);
+    strncpy(identity, psk_identity, max_identity_len);
 
     key = OPENSSL_hexstr2buf(psk_key, &key_len);
         if (key == NULL) {
@@ -209,7 +209,7 @@ unsigned int PskClientCallback(SSL *ssl, const char *hint, char *identity,
         }
         if (max_psk_len > INT_MAX || key_len > (long)max_psk_len) {
             fprintf(stderr,
-                       "PSK buffer of callback is too small (%d) for key (%ld)\n",
+                       "PSK buffer is too small (%d) for key (%ld)\n",
                        max_psk_len, key_len);
             OPENSSL_free(key);
             return 0;
@@ -224,10 +224,12 @@ unsigned int PskClientCallback(SSL *ssl, const char *hint, char *identity,
 
 int CoapConnect(void)
 {
+    int rc = 0;
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         fprintf(stderr, "WSAStartup failed\n");
-        return 1;
+        rc = 1;
+        goto SSL_ERROR;
     }
 
     // Connect to the server
@@ -237,10 +239,8 @@ int CoapConnect(void)
     hints.ai_socktype = SOCK_STREAM;
  	if (getaddrinfo(ctx->server_addr, COAP_PORT, &hints, &res) != 0) {
         fprintf(stderr, "getaddrinfo failed\n");
-        SSL_free(ctx->ssl);
-        SSL_CTX_free(ctx->ssl_ctx);
-        WSACleanup();
-        return 2;
+        rc = 2;
+        goto SSL_ERROR;
     }
 
     // Create a TCP socket
@@ -248,19 +248,15 @@ int CoapConnect(void)
     if (sockfd == INVALID_SOCKET) {
         fprintf(stderr, "Socket creation failed\n");
         freeaddrinfo(res);
-        SSL_free(ctx->ssl);
-        SSL_CTX_free(ctx->ssl_ctx);
-        WSACleanup();
-        return 3;
+        rc = 3;
+        goto SSL_ERROR;
     }
 
     if (connect(sockfd, res->ai_addr, (int)res->ai_addrlen) != 0) {
         fprintf(stderr, "Socket connection failed\n");
         freeaddrinfo(res);
-        SSL_free(ctx->ssl);
-        SSL_CTX_free(ctx->ssl_ctx);
-        WSACleanup();
-        return 4;
+        rc = 4;
+        goto SSL_ERROR;
     }
 
     // Attach the socket to the SSL structure
@@ -269,15 +265,21 @@ int CoapConnect(void)
     // Perform the TLS handshake
     if (SSL_connect(ctx->ssl) <= 0) {
         fprintf(stderr, "SSL handshake failed\n");
+        freeaddrinfo(res);
         ERR_print_errors_fp(stderr);
         closesocket(sockfd);
-        SSL_free(ctx->ssl);
-        SSL_CTX_free(ctx->ssl_ctx);
-        WSACleanup();
-        return 5;
+        rc = 5;
+        goto SSL_ERROR;
     }
     freeaddrinfo(res);
-    return 0;
+    goto SSL_DONE;
+
+SSL_ERROR:
+    SSL_free(ctx->ssl);
+    SSL_CTX_free(ctx->ssl_ctx);
+    WSACleanup();
+SSL_DONE:
+    return rc;
 }
 
 int CoapInit(void)
