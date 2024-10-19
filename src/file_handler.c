@@ -37,7 +37,7 @@ int LoadCredentials(struct Credentials *cred)
 
 	cred->identity = realloc(cred->identity, strlen(cred->identity)+1);
 	cred->key = realloc(cred->key, strlen(cred->key)+1);
-	printf("identity: %s\nkey: %s\n", cred->identity, cred->key);
+	//printf("identity: %s\nkey: %s\n", cred->identity, cred->key);
 
 	fclose(f);
 	return 0;

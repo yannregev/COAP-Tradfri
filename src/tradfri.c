@@ -177,7 +177,7 @@ int TradfriTurnOffLamp(char* lamp_id, char *response)
 	return len;
 }
 
-int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response, int res_len)
+int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response)
 {
 	int len;
 	int endpoint_len = strlen(lamp_id)+strlen(DEFAULT_PATH) + 1;

@@ -7,17 +7,70 @@
 
 //Commands
 #define GET_ALL "get-all"
-#define GET "get "
-#define TURN_OFF "turn-off "
-#define TURN_ON "turn-on "
-#define DIM "dim "
-#define COLOR "color "
+#define GET "get"
+#define TURN_OFF "turn-off"
+#define TURN_ON "turn-on"
+#define DIM "dim"
+#define COLOR "color"
 #define INPUT "input:"
 #define EXIT "exit\n"
 
+static int HandleGetAllCommand(char *arg, char *res)
+{
+	return TradfriGetAllLamps(res);
+}
+
+static int HandleDimCommand(char *arg, char *res) 
+{
+	char *lamp_id = strtok(arg, " ");
+	int value = atoi(strtok(NULL, " "));
+	if (value < 0 || value > 254) 
+	{ 
+		printf("Illegal dim value!\n");
+		return -1;
+	}
+	return TradfriDimLamp(lamp_id, value, res);
+}
+
+static int HandleColorCommand(char *arg, char *res) 
+{
+	char *lamp_id = strtok(arg, " ");
+	uint16_t value = strtol(strtok(NULL, " "), NULL, 16);
+	return TradfriSetLampColor(lamp_id, value, res);
+}
+
+typedef int (*CommandFunc)(char *arg, char *res);
+
+typedef struct {
+	const char *command;
+	CommandFunc func;
+	int argOffset;
+}Command_t;
+
+Command_t commandTable[] = {
+	{GET_ALL, HandleGetAllCommand, 0},
+	{GET, TradfriGetLamp, strlen(GET) + 1},
+	{TURN_OFF, TradfriTurnOffLamp, strlen(TURN_OFF) + 1},
+	{TURN_ON, TradfriTurnOnLamp, strlen(TURN_ON) + 1},
+	{DIM, HandleDimCommand, strlen(DIM) + 1},
+	{COLOR, HandleColorCommand, strlen(COLOR) + 1},
+};
+
+static void parseAndExecuteCommand(char *input, char *res)
+{
+	for (int i = 0; i < sizeof(commandTable) / sizeof(Command_t); ++i)
+	{
+		const char* command = commandTable[i].command;
+		if (strncmp(input, command, strlen(command)) == 0) 
+		{
+			commandTable[i].func(input + commandTable[i].argOffset, res);
+			return;
+		}
+	}
+}
+
 static void printOptions(void)
 {
-
 	printf(	"Enter one of the following options:\n"
 			"	*\"get-all\" : get all lamps registered with tradfri\n"
 			"	*\"get <lamp-id>\" : get data about a specific\n"
@@ -27,16 +80,12 @@ static void printOptions(void)
 			"	*\"color <lamp-id> <hex>\": Change lamp color\n"
 			"	*\"exit\": quit program\n"
 			"input: ");
-
 }
 
 int main(int argc, char** argv)
 {
-	
-	char *lamp_id;
-	char res[1024];
+	char res[1024] = {0};
 	char input[100] = {0};
-	uint64_t value;
 	TradfriInit();
 	printOptions();
 
@@ -44,53 +93,8 @@ int main(int argc, char** argv)
 	input[strcspn(input, "\n")] = '\0';	// Strip newline
 	while (strncmp(input, "exit", 4) != 0)
 	{
-		if (strncmp(input, GET_ALL, strlen(GET_ALL)) == 0)
-		{
-			TradfriGetAllLamps(res);
-			printf("response = %s\n", res);
-		}
-		else if (strncmp(input, GET, strlen(GET)) == 0)
-		{
-			TradfriGetLamp(input + strlen(GET), res);
-			printf("response = %s\n", res);
-		}
-		else if (strncmp(input, TURN_OFF, strlen(TURN_OFF)) == 0)
-		{
-			TradfriTurnOffLamp(input + strlen(TURN_OFF), res);
-			//printf("response = %s\n", res);
-		}
-		else if (strncmp(input, TURN_ON, strlen(TURN_ON)) == 0)
-		{
-			TradfriTurnOnLamp(input + strlen(TURN_ON), res);
-			//printf("response = %s\n", res);
-		}
-		else if (strncmp(input, DIM, strlen(DIM)) == 0)
-		{
-			
-			lamp_id = strtok(input + strlen(DIM), " ");
-			value = atoi(strtok(NULL, " "));
-			if (value < 0 || value > 254) 
-			{ 
-				printf("Illegal dim value!\n");
-			}
-			else
-			{
-				TradfriDimLamp(lamp_id, value, res);
-				printf("response = %s\n", res);
-			}
-
-		}
-		else if (strncmp(input, COLOR, strlen(COLOR)) == 0)
-		{
-			
-			lamp_id = strtok(input + strlen(COLOR), " ");
-			value = strtol(strtok(NULL, " "), NULL, 16);
-			{
-				TradfriSetLampColor(lamp_id, value, res, 1024);
-				printf("response = %s\n", res);
-			}
-
-		}
+		parseAndExecuteCommand(input, res);
+		printf("Response = %s\n", res);
 		printf(INPUT);
 		memset(input, '\0', 100);
 		fgets(input, 100, stdin);

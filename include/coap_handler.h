@@ -6,7 +6,7 @@
 #include <assert.h>
 
 
-struct COAP_CTX_t
+typedef struct 
 {
 	char *psk_identity;
 	int identity_len;
@@ -16,7 +16,7 @@ struct COAP_CTX_t
 	int addr_len;
 	SSL *ssl;
 	SSL_CTX *ssl_ctx;
-};
+}CoapCtx_t;
 
 
 int CoapInit(void);

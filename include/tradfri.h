@@ -10,5 +10,5 @@ int TradfriGetLamp(char* lamp_id, char *response);
 int TradfriTurnOnLamp(char* lamp_id, char* response);
 int TradfriTurnOffLamp(char* lamp_id, char* response);
 int TradfriDimLamp(char* lamp_id, int dim, char* response);
-int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response, int res_len);
+int TradfriSetLampColor(char* lamp_id, uint64_t color_hex, char *response);
 #endif

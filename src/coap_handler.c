@@ -26,7 +26,7 @@ typedef struct {
     uint16_t message_id;
 } CoapHeader;
 
-struct COAP_CTX_t *ctx;
+CoapCtx_t *ctx;
 WSADATA wsaData;
 int sockfd;
 
@@ -288,7 +288,7 @@ int CoapInit(void)
         fprintf(stderr, "COAP_init called twice!\n");
         return 1;
     }
-	ctx = (struct COAP_CTX_t*)malloc(sizeof(struct COAP_CTX_t));
+	ctx = (CoapCtx_t*)malloc(sizeof(CoapCtx_t));
 	ctx->psk_key = NULL;
 	ctx->psk_identity = NULL;
 	ctx->server_addr = NULL;
