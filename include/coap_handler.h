@@ -6,8 +6,7 @@
 #include <assert.h>
 
 
-typedef struct 
-{
+typedef struct {
 	char *psk_identity;
 	int identity_len;
 	char *psk_key;

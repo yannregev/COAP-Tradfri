@@ -94,6 +94,7 @@ static void printOptions(void)
 
 int main(int argc, char** argv)
 {
+
 	char res[1024] = {0};
 	char input[100] = {0};
 	TradfriInit();
@@ -115,5 +116,6 @@ int main(int argc, char** argv)
 
 	printf(EXIT);
 	TradfriFree();
+
 	return 0;
 }

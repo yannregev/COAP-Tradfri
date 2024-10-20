@@ -3,11 +3,6 @@
 #include "coap_handler.h"
 #include "file_handler.h"
 
-//Not too elegant but works for now
-//#include "../Credentials.txt"
-
-#define SERVER_IP "192.168.1.16"
-
 #define TURN_ON_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 1 }]}"
 #define TURN_OFF_LAMP_PAYLOAD "{\"3311\": [{ \"5850\": 0 }]}"
 
@@ -19,25 +14,30 @@
 
 static char* RetrieveKey(char* data, int len)
 {
-	fprintf(stderr, "Not implemented!\n");
-	exit(1);
-
-	char *ptr;
-	char *tok;
-	char *res;
-	if ((ptr = strstr(data, "\"9091\":")) == NULL)
+	if (strncmp(data, "{\"9091\":\"", strlen("{\"9091\":\"")) != 0)
+	{
+		fprintf(stderr, "Error, String does not contain 9091!\n");
+		exit(1);
+	}
+	char *first;
+	char *end;
+	if ((first = strchr(data, ':')) == NULL)
+	{
+		fprintf(stderr, "Critical error registering identity!\n");
+		exit(1);
+	}
+	first += 2; // skip (:")
+	if ((end = strchr(first, '"')) == NULL)
 	{
 		fprintf(stderr, "Critical error registering identity!\n");
 		exit(1);
 	}
 
-	tok = strtok(ptr, "\""); // 9091
-	tok = strtok(NULL, "\""); // :
-	tok = strtok(NULL, "\""); // key
-
-	res = malloc(strlen(tok)+1);
-	strcpy(res, tok);
-	return res;
+	size_t keyLen = end - first + 1;
+	char *key = (char*)malloc(keyLen);
+	strncpy(key,first, keyLen);
+	key[keyLen-1] = '\0';
+	return key;
 }
 
 static void GenerateIdentity(char *hexArray, int size)
@@ -75,27 +75,33 @@ static void TradfriRegisterIdentity(void)
 	GenerateIdentity(identity, 14);
 	identity[14] = '\0';
 
-
 	int len = sprintf(payload, "{\"9090\" : \"%s\"}", identity);
 	printf("payload = %s\n\n",payload);
 	CoapSetPskKey(key, strlen(key));
 	CoapSetPskIdentity(identity, strlen(identity));
+
+	//TODO: connect to server
+
 	len = CoapPostRequest(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
 	
+	//TODO: Disconnect from server
+
 	key = RetrieveKey(response, len);
 	Credentials_t credentials;
 	credentials.identity = identity;
 	credentials.key = key;
 	StoreCredentials(credentials);
+	CoapSetPskKey(key, strlen(key));
 }
 
 int TradfriInit()
 {
     // Seed the random number generator
     srand(time(NULL));
+	FileHandlerInit();
 	Credentials_t credentials;
 	assert(CoapInit() == 0);
-	if (LoadCredentials(&credentials) != 0)
+	if (GetCredentials(&credentials) != 0)
 	{
 		TradfriRegisterIdentity();
 	}
@@ -104,8 +110,9 @@ int TradfriInit()
 		CoapSetPskKey(credentials.key, strlen(credentials.key));
 		CoapSetPskIdentity(credentials.identity, strlen(credentials.identity));
 	}
-
-	CoapSetServerAddr(SERVER_IP, strlen(SERVER_IP));
+	char ipAddress[100];
+	GetIpAddress(ipAddress, 100);
+	CoapSetServerAddr(ipAddress, strlen(ipAddress));
 	assert(CoapConnect() == 0);
 
 	free(credentials.key);
