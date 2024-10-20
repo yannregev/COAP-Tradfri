@@ -6,7 +6,11 @@ typedef struct {
 	char *key;
 }Credentials_t;
 
-int LoadCredentials(Credentials_t *cred);
+void FileHandlerInit(void);
+
+int GetCredentials(Credentials_t *cred);
+
+int GetIpAddress(char *buffer, int size);
 
 int StoreCredentials(Credentials_t cred);
 

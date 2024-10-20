@@ -4,72 +4,115 @@
 
 #include "file_handler.h"
 
-#define CREDENTIALS_PATH "./Credentials.txt"
+//#define DEBUG
 
-int LoadCredentials(Credentials_t *cred)
+#define SETTINGS_PATH "./Settings.txt"
+
+typedef void (*SettingHandler)(char* value);
+
+typedef struct {
+	char* key;
+	char** value;
+} Settings_t;
+
+static char *ipAddress;
+static char *identity;
+static char *key;
+
+Settings_t settings[] = {
+	{"IP_ADDRESS=", &ipAddress},
+	{"IDENTITY=", &identity},
+	{"KEY=", &key},
+};
+
+int GetIpAddress(char *buffer, int size)
 {
-	FILE *f;
-	char ch;
-	int i = 0;
-	cred->identity = malloc(100);
-	cred->key = malloc(100);
+	if (strlen(ipAddress) > size) return -1;
+	strncpy(buffer, ipAddress, size);
+	return 0;
+}
 
-	memset(cred->identity, '\0', 100);
-	memset(cred->key, '\0', 100);
-
-	if ((f = fopen(CREDENTIALS_PATH, "rb")) == NULL)
-	{
-		fprintf(stderr, "Failed to  open %s!\n", CREDENTIALS_PATH);
-		return -1;
-	} 
-
-	while ((ch = fgetc(f)) != ' ' && i < 100-1)
-	{
-		cred->identity[i++] = ch;
-	}
-	i = 0;
-	while ((ch = fgetc(f)) != ' ' && i < 100-1)
-	{
-		cred->key[i++] = ch;
-	}
-
-
-
-	cred->identity = realloc(cred->identity, strlen(cred->identity)+1);
-	cred->key = realloc(cred->key, strlen(cred->key)+1);
-	//printf("identity: %s\nkey: %s\n", cred->identity, cred->key);
-
-	fclose(f);
+int GetCredentials(Credentials_t *cred)
+{
+	cred->identity = (char*)malloc(strlen(identity) + 1);
+	cred->key = (char*)malloc(strlen(key) + 1);
+	strncpy(cred->identity, identity, strlen(identity) + 1);
+	strncpy(cred->key, key, strlen(key) + 1);
 	return 0;
 }
 
 int StoreCredentials(const Credentials_t cred)
 {
+	if (key) free(key);
+	if (identity) free(identity);
 
-	FILE *f;
+	identity = (char*)malloc(strlen(cred.identity) + 1);
+	key = (char*)malloc(strlen(cred.key) + 1);
+	strncpy(identity, cred.identity, strlen(cred.identity) + 1);
+	strncpy(key, cred.key, strlen(cred.key) + 1);
 
-	if ((f = fopen(CREDENTIALS_PATH, "wb")) == NULL)
+	FILE *file = fopen(SETTINGS_PATH, "wb");
+    if (file == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+    
+	for (int i = 0; i < sizeof(settings) / sizeof(Settings_t); ++i)
 	{
-		fprintf(stderr, "Failed to  open %s!\n", CREDENTIALS_PATH);
-		return -1;
-	} 
+		fprintf(file, "%s\"%s\"\n", settings[i].key, *settings[i].value);
+	}
 
- 	if (fwrite(cred.identity, sizeof(char), strlen(cred.identity),  f) != strlen(cred.identity))
- 	{
- 		fprintf(stderr, "Failed to write identity!\n");
- 		fclose(f);
- 		return -2;
- 	}
- 	fwrite(" ", sizeof(char), 1, f);
-
- 	if (fwrite(cred.key, sizeof(char), strlen(cred.key),  f) != strlen(cred.key))
- 	{
- 		fprintf(stderr, "Failed to write identity!\n");
- 		fclose(f);
- 		return -3;
- 	}
-	fwrite(" ", sizeof(char), 1, f);
-
-	fclose(f);
+    fclose(file);
 	return 0;
+}
+
+static void ParseSettings(const char* filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+    char line[1024];
+
+    // Read file line by line
+    while (fgets(line, sizeof(line), file) != NULL) 
+	{
+        for (int i = 0; i < sizeof(settings) / sizeof(Settings_t); ++i)
+		{
+			if (strncmp(line, settings[i].key, strlen(settings[i].key)) == 0) 
+			{
+				char *start = strchr(line, '"');
+				if (start) {
+					char *end = strchr(start + 1, '"');
+					if (end) {
+						size_t length = end - start - 1;
+						*settings[i].value = malloc(length + 1); 
+						if (*settings[i].value) {
+							
+							strncpy(*settings[i].value, start + 1, length);
+							(*settings[i].value)[length] = '\0';
+						}
+					}
+				}
+			}
+		}
+    }
+    fclose(file);
+}
+
+void FileHandlerInit(void)
+{
+	ParseSettings(SETTINGS_PATH);
+
+#ifdef DEBUG
+	printf("%s\n%s\n%s\n", ipAddress, identity, key);
+	exit(1);
+#endif
+
+	if (!ipAddress || !identity || !key)
+	{
+		printf("Missing settings!\n");
+		exit(1);
+	}
+
 }
