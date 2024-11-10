@@ -9,7 +9,7 @@
 #define DIM_LAMP_PAYLOAD "{\"3311\": [{ \"5851\": %d }]}"
 #define COLOR_LAMP_PAYLOAD "{\"3311\": [{ \"5706\": \"%06x\" }]}"
 
-#define REGISTER_ENDPOINT "15001/9063"
+#define REGISTER_ENDPOINT "15011/9063"
 #define DEFAULT_PATH "15001/"
 
 static char* RetrieveKey(char* data, int len)
@@ -60,14 +60,17 @@ static void GenerateIdentity(char *hexArray, int size)
 }
 
 /**
- *	TODO: Read security key from usere 
+ *	TODO: Read security key from user
  **/
 static void TradfriRegisterIdentity(void)
 {
 	char payload[100];
 	char response[100];
 	char identity[15];
-	char *key = malloc(100);
+	char ipAddress[20];
+	char key[100];
+
+	// TODO check IP address
 
 	fprintf(stdout, "Enter tradfri security key:\n");
 	fgets(key, 100, stdin);
@@ -82,14 +85,26 @@ static void TradfriRegisterIdentity(void)
 
 	//TODO: connect to server
 
+
+	GetIpAddress(ipAddress, 100);
+	CoapSetServerAddr(ipAddress, strlen(ipAddress));
+	assert(CoapConnect() == 0);
+
 	len = CoapPostRequest(REGISTER_ENDPOINT, strlen(REGISTER_ENDPOINT), payload, len, response);
 	
 	//TODO: Disconnect from server
+
+	free(credentials.key);
+	free(credentials.identity);
+	CoapDisconnect();
 
 	key = RetrieveKey(response, len);
 	Credentials_t credentials;
 	credentials.identity = identity;
 	credentials.key = key;
+
+	printf("identity = %s, key %s\n", identity, key);
+
 	StoreCredentials(credentials);
 	CoapSetPskKey(key, strlen(key));
 }

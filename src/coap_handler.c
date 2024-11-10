@@ -282,6 +282,11 @@ SSL_DONE:
     return rc;
 }
 
+int CoapDisconnect(void)
+{
+    closesocket(sockfd);
+}
+
 int CoapInit(void)
 {
     if (ctx != NULL)

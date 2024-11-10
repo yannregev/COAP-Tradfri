@@ -20,6 +20,7 @@ typedef struct {
 
 int CoapInit(void);
 int CoapConnect(void);
+int CoapDisconnect(void);
 int CoapSetPskKey(char *key, int len);
 int CoapSetPskIdentity(char *identity, int len);
 int CoapGetRequest(char *endpoint, int endpoint_len, char *response);

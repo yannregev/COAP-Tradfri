@@ -15,9 +15,9 @@ typedef struct {
 	char** value;
 } Settings_t;
 
-static char *ipAddress;
-static char *identity;
-static char *key;
+static char *ipAddress = NULL;
+static char *identity = NULL;
+static char *key = NULL;
 
 Settings_t settings[] = {
 	{"IP_ADDRESS=", &ipAddress},
@@ -27,13 +27,14 @@ Settings_t settings[] = {
 
 int GetIpAddress(char *buffer, int size)
 {
-	if (strlen(ipAddress) > size) return -1;
+	if (!ipAddress || strlen(ipAddress) > size) return -1;
 	strncpy(buffer, ipAddress, size);
 	return 0;
 }
 
 int GetCredentials(Credentials_t *cred)
 {
+	if (!identity || !key) return -1;
 	cred->identity = (char*)malloc(strlen(identity) + 1);
 	cred->key = (char*)malloc(strlen(key) + 1);
 	strncpy(cred->identity, identity, strlen(identity) + 1);
@@ -109,9 +110,9 @@ void FileHandlerInit(void)
 	exit(1);
 #endif
 
-	if (!ipAddress || !identity || !key)
+	if (!ipAddress)
 	{
-		printf("Missing settings!\n");
+		printf("No ip Address provided!\n");
 		exit(1);
 	}
 
